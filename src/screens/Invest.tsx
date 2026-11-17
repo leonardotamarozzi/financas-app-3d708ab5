@@ -50,8 +50,8 @@ export default function Invest() {
   return (
     <div className="pb-28">
       <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center px-5 pt-5 pb-4">
-        <h1 className="flex-1 text-[34px] font-bold">Investimentos</h1>
-        <div className="flex items-center gap-7">
+        <h1 className="flex-1 min-w-0 truncate text-[30px] font-bold">Investimentos</h1>
+        <div className="flex items-center gap-6 shrink-0 pl-3">
           <EyeToggle />
           <button type="button" aria-label="Buscar produtos" className="p-2 -m-2 rounded-full hover:bg-card" onClick={() => nav('/produtos')}>
             <I.Search size={28} />
@@ -150,8 +150,15 @@ export default function Invest() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{p.name}</p>
                       <p className="text-muted text-sm truncate">
-                        Aplicado <Money cents={pos.principal} />
-                        {p.model === 'market' && <> · hoje {dc >= 0 ? '+' : ''}{formatPercent(dc * 100)}</>}
+                        {p.model === 'market' ? (
+                          <>
+                            Hoje <span className={dc >= 0 ? 'text-pos' : 'text-red-300'}>{dc >= 0 ? '+' : ''}{formatPercent(dc * 100)}</span>
+                          </>
+                        ) : (
+                          <>
+                            Aplicado <Money cents={pos.principal} />
+                          </>
+                        )}
                       </p>
                     </div>
                     <div className="text-right">

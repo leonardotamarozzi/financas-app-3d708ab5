@@ -29,13 +29,15 @@ export default function Savings() {
 
   return (
     <Screen title="Poupança" back="/" right={<EyeToggle />}>
-      <Card className="p-5 flex items-center gap-4">
-        <Avatar src={state.profile.photo} name={state.profile.name} size={52} />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-[18px] truncate">{state.profile.name}</p>
-          <p className="text-muted text-sm">Foto, nome, saldo, logo e ícone do app</p>
+      <Card className="p-5">
+        <div className="flex items-center gap-4">
+          <Avatar src={state.profile.photo} name={state.profile.name} size={52} />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-[18px] truncate">{state.profile.name}</p>
+            <p className="text-muted text-sm">Foto, nome, saldo, logo e ícone do app</p>
+          </div>
         </div>
-        <Pill variant="outline" onClick={() => nav('/ajustar')} className="px-4">
+        <Pill variant="outline" onClick={() => nav('/ajustar')} className="w-full mt-4">
           Ajustar dados
         </Pill>
       </Card>

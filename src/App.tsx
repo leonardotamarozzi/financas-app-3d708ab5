@@ -25,8 +25,10 @@ import ComingSoon from './screens/ComingSoon'
 
 export default function App() {
   const { unlocked } = useStore()
-  const { pathname } = useLocation()
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
 
   return (
     <div className="mx-auto max-w-[430px] min-h-screen bg-bg md:border-x md:border-line relative">
@@ -56,8 +58,9 @@ export default function App() {
               }
             />
             <Route path="/produtos" element={<Products />} />
-            <Route path="/investir" element={<InvestFlow />} />
-            <Route path="/resgatar" element={<RedeemFlow />} />
+            {/* key by query string so a new link (other product/position) starts the flow fresh */}
+            <Route path="/investir" element={<InvestFlow key={search} />} />
+            <Route path="/resgatar" element={<RedeemFlow key={search} />} />
             <Route path="/config" element={<SettingsScreen />} />
             <Route path="/ajuda" element={<HelpScreen />} />
             <Route path="/forum" element={<ComingSoon title="Fórum" />} />

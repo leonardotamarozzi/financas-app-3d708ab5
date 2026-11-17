@@ -3,3 +3,4 @@ dist
 .reponame
 *.log
 scripts/test-images
+.claude

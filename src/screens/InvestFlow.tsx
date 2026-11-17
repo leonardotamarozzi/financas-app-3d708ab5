@@ -98,9 +98,8 @@ export default function InvestFlow() {
                         <ProductBadge product={p} size={40} />
                         <span className="flex-1 min-w-0">
                           <span className="block font-semibold truncate">{p.name}</span>
-                          <span className="block text-muted text-sm truncate">
-                            {p.rateLabel(state.rates)} · mín. {formatBRL(p.minApplication)}
-                          </span>
+                          <span className="block text-muted text-sm">{p.rateLabel(state.rates)}</span>
+                          <span className="block text-muted text-sm">Mínimo {formatBRL(p.minApplication)}</span>
                         </span>
                         <I.ChevronRight className="text-muted" />
                       </Card>
