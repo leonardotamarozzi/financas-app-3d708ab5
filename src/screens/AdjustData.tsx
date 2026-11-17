@@ -7,9 +7,10 @@ import { AmountInput, Avatar, Card, Field, FilePick, Pill, Screen, cx } from '..
 import * as I from '../components/Icons'
 import { fileToAppIcon, fileToAvatar, fileToResized } from '../lib/image'
 import { DEFAULT_ICON_URL } from '../lib/appIcon'
+import { pixNotice } from '../lib/notify'
 
 export default function AdjustData() {
-  const { state, run, toast } = useStore()
+  const { state, run, toast, notify } = useStore()
   const nav = useNavigate()
   const p = state.profile
   const [name, setName] = useState(p.name)
@@ -20,6 +21,24 @@ export default function AdjustData() {
   const [icon, setIcon] = useState<AppIcon | undefined>(p.icon)
   const [balance, setBalance] = useState(accountBalance(state))
   const [errors, setErrors] = useState<{ name?: string; appName?: string }>({})
+  const notifSupported = typeof Notification !== 'undefined'
+  const [perm, setPerm] = useState<string>(notifSupported ? Notification.permission : 'unsupported')
+
+  async function enableSystemNotifications() {
+    if (!notifSupported) return
+    try {
+      const r = await Notification.requestPermission()
+      setPerm(r)
+      toast(r === 'granted' ? 'Notificações do sistema ativadas.' : 'Permissão não concedida. O aviso dentro do app continua funcionando.', r === 'granted' ? 'ok' : 'error')
+    } catch {
+      toast('Este navegador não deixou ativar as notificações.', 'error')
+    }
+  }
+
+  function testNotification() {
+    // Uses what is on the form now, so a new icon/name can be previewed before saving. Balance is not touched.
+    notify(pixNotice({ appName: appName.trim() || p.appName, accountNumber: p.accountNumber, icon, logo }, { payerName: 'Maria Exemplo', amount: 2500 }))
+  }
 
   async function pick<T>(f: File, fn: (f: File) => Promise<T>, set: (v: T) => void) {
     try {
@@ -111,6 +130,24 @@ export default function AdjustData() {
           <p className="text-muted text-sm mt-3">
             Imagem quadrada de pelo menos 192×192px (PNG, JPG, WebP ou SVG, até 5 MB). O ícone vale só neste navegador. Para vê-lo na tela inicial do celular, use "Adicionar à tela inicial" depois de salvar. No iPhone, remova e adicione de novo para trocar.
           </p>
+        </section>
+
+        <section aria-labelledby="notif-title" className="space-y-3">
+          <h2 id="notif-title" className="text-muted text-sm">Notificações</h2>
+          <div className="flex flex-wrap gap-3">
+            <Pill type="button" onClick={testNotification}>
+              Testar notificação
+            </Pill>
+            <Pill type="button" variant="outline" onClick={enableSystemNotifications} disabled={!notifSupported || perm === 'granted'}>
+              {perm === 'granted' ? 'Notificações do sistema ativas' : 'Ativar notificações do sistema'}
+            </Pill>
+          </div>
+          <p className="text-muted text-sm">
+            O aviso de Pix aparece no topo do app com o ícone acima. As notificações do sistema só aparecem enquanto o app estiver aberto (em uma aba ou na tela inicial).
+            {!notifSupported && ' Este navegador não oferece notificações do sistema.'}
+            {perm === 'denied' && ' Você bloqueou as notificações; libere nas configurações do navegador.'}
+          </p>
+          <p className="text-muted text-sm">Conta exibida nos avisos: final ***{p.accountNumber}</p>
         </section>
 
         <Pill type="submit" variant="solid" className="w-full h-14">

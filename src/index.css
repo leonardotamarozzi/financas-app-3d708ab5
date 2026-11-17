@@ -15,3 +15,14 @@ body { color: #fff; font-family: Figtree, system-ui, sans-serif; -webkit-font-sm
 .sheet-in { animation: sheet-in .22s ease-out; }
 .toast-in { animation: toast-in .18s ease-out; }
 @media (prefers-reduced-motion: reduce) { .sheet-in, .toast-in { animation: none; } }
+
+/* Safe area: keep content below the iPhone status bar / notch (min 28px on desktop). */
+.pt-safe { padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 20px)); }
+.top-safe-toast { top: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)); }
+.pb-nav { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Notification banner (iOS style) */
+@keyframes notif-in { from { transform: translateY(-120%); opacity: 0; } to { transform: none; opacity: 1; } }
+.notif-in { animation: notif-in .25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .notif-in { animation: none; } }
+.top-safe-notif { top: calc(env(safe-area-inset-top, 0px) + 8px); }

@@ -18,3 +18,13 @@
 - Tela Investimentos carregada sob demanda (code split) para tirar o recharts do pacote inicial.
 - Ícone padrão em SVG próprio; versões PNG 192/512 do padrão são geradas no navegador para apple-touch-icon e manifest.
 - Publicação: o plano do GitHub recusou Pages em repositório privado (HTTP 422). Seguindo o prompt, o repositório foi tornado público (nome aleatório, sem dados pessoais, site com noindex e robots.txt bloqueando indexação).
+
+## Pix agendado e notificação
+- Safe area: utilitário `pt-safe` = `max(28px, env(safe-area-inset-top) + 20px)` nos cabeçalhos de todas as telas (inclusive Login). Os meta tags `viewport-fit=cover` e `black-translucent` já existiam. O fim das telas usa `pb-nav` (7rem + safe area de baixo).
+- Número da conta exibido nos avisos é fictício (`NNNNN-N`), gerado uma vez e mostrado em "Ajustar dados". Estados antigos ganham o campo pela migração (`migrateState`), sem mudar a versão.
+- O Pix agendado entra no extrato com a data marcada (não a hora em que o app abriu) e descrição "De {nome}" (com " · descrição" quando houver).
+- O atalho "Em 1 min" guarda o instante exato; se a pessoa editar a data/hora à mão, vale o minuto digitado.
+- Processamento: ao carregar, ao voltar para a aba (`visibilitychange`) e por `setTimeout` até o próximo vencimento. Com o app fechado nada roda; o crédito acontece na próxima abertura (uma única vez).
+- Ícone do banner: ícone do app → logo do login → ícone padrão. "Testar notificação" usa o que está no formulário (antes de salvar) e não mexe no saldo.
+- Notificação do sistema: `new Notification` só com permissão concedida e só com o app aberto. Sem service worker nem servidor de push (fora do escopo e das regras). Navegadores que só aceitam notificação via service worker (ex.: Chrome no Android) ficam só com o banner.
+- O "X invisível" fica no canto superior direito do banner (aparece com foco do teclado). Esc também fecha; Enter abre o extrato.

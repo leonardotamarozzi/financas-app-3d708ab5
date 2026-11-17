@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   accountBalance,
+  cancelScheduledPix,
+  migrateState,
+  nextPixDelay,
+  processDuePix,
+  schedulePix,
   addMovement,
   createInitialState,
   invest,
@@ -199,5 +204,78 @@ describe('image helpers', () => {
   it('fitWithin never upscales', () => {
     expect(fitWithin(1000, 500, 256)).toEqual({ width: 256, height: 128 })
     expect(fitWithin(100, 50, 256)).toEqual({ width: 100, height: 50 })
+  })
+})
+
+describe('scheduled Pix', () => {
+  const base = () => ({ ...createInitialState(T0), transactions: [], sampleData: false }) as AppState
+  const inMin = (m: number) => new Date(T0.getTime() + m * 60_000).toISOString()
+
+  it('validates name, amount and date', () => {
+    const s = base()
+    const ok = { payerName: 'Ana Teste', amount: 2500, dueAt: inMin(1) }
+    expect(() => schedulePix(s, { ...ok, payerName: 'A' }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, payerName: 'x'.repeat(61) }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, amount: 0 }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, amount: 100_000_001 }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, dueAt: inMin(-1) }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, dueAt: inMin(60 * 24 * 400) }, T0)).toThrow(UserError)
+    expect(() => schedulePix(s, { ...ok, dueAt: 'not a date' }, T0)).toThrow(UserError)
+    const next = schedulePix(s, ok, T0)
+    expect(next.scheduledPix).toHaveLength(1)
+    expect(next.scheduledPix[0].status).toBe('agendado')
+    expect(accountBalance(next)).toBe(0)
+  })
+
+  it('does not credit a future Pix and credits a due one with the right amount', () => {
+    let s = schedulePix(base(), { payerName: 'Ana Teste', amount: 2500, dueAt: inMin(1) }, T0)
+    const early = processDuePix(s, T0)
+    expect(early.received).toHaveLength(0)
+    expect(early.state).toBe(s)
+    expect(nextPixDelay(s, T0)).toBe(60_000)
+    const r = processDuePix(s, new Date(inMin(2)))
+    s = r.state
+    expect(r.received).toHaveLength(1)
+    expect(accountBalance(s)).toBe(2500)
+    const tx = s.transactions[0]
+    expect(tx).toMatchObject({ type: 'pix_in', title: 'Pix recebido', description: 'De Ana Teste', amount: 2500, date: inMin(1) })
+    expect(s.scheduledPix[0]).toMatchObject({ status: 'recebido', receivedTxId: tx.id })
+    expect(nextPixDelay(s, T0)).toBeNull()
+  })
+
+  it('is idempotent and keeps the balance invariant', () => {
+    let s = base()
+    s = schedulePix(s, { payerName: 'Ana Teste', amount: 2500, dueAt: inMin(1) }, T0)
+    s = schedulePix(s, { payerName: 'Bruno Teste', amount: 1000, dueAt: inMin(5) }, T0)
+    const later = new Date(inMin(10))
+    const once = processDuePix(s, later).state
+    const twice = processDuePix(once, later)
+    expect(twice.received).toHaveLength(0)
+    expect(accountBalance(twice.state)).toBe(3500)
+    expect(twice.state.transactions).toHaveLength(2)
+    expect(accountBalance(twice.state)).toBe(twice.state.transactions.reduce((a, t) => a + t.amount, 0))
+  })
+
+  it('cancels only scheduled items', () => {
+    let s = schedulePix(base(), { payerName: 'Ana Teste', amount: 2500, dueAt: inMin(1) }, T0)
+    const id = s.scheduledPix[0].id
+    s = cancelScheduledPix(s, id)
+    expect(s.scheduledPix[0].status).toBe('cancelado')
+    expect(processDuePix(s, new Date(inMin(5))).received).toHaveLength(0)
+    expect(() => cancelScheduledPix(s, id)).toThrow(UserError)
+    expect(() => cancelScheduledPix(s, 'nope')).toThrow(UserError)
+  })
+
+  it('migration fills scheduledPix and accountNumber', () => {
+    const old = createInitialState(T0) as Partial<AppState>
+    delete (old as { scheduledPix?: unknown }).scheduledPix
+    const profile = { ...old.profile! } as Partial<AppState['profile']>
+    delete profile.accountNumber
+    const m = migrateState({ ...old, profile: profile as AppState['profile'] })
+    expect(m.scheduledPix).toEqual([])
+    expect(m.profile.accountNumber).toMatch(/^\d{5}-\d$/)
+    expect(m.profile.name).toBe('Seu nome')
+    const kept = migrateState({ ...old, profile: { ...old.profile!, accountNumber: '12345-6' } })
+    expect(kept.profile.accountNumber).toBe('12345-6')
   })
 })

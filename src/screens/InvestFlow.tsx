@@ -60,8 +60,8 @@ export default function InvestFlow() {
   const annual = product?.model === 'fixed' && product.annualRate ? product.annualRate(state.rates) : null
 
   return (
-    <div className="pb-28">
-      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center gap-4 px-5 pt-5 pb-4">
+    <div className="pb-nav">
+      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center gap-4 px-5 pt-safe pb-4">
         {step !== 'feito' && (
           <button type="button" aria-label="Voltar" className="p-2 -m-2 rounded-full hover:bg-card" onClick={back}>
             <I.ArrowLeft size={28} />

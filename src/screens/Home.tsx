@@ -32,8 +32,8 @@ export default function Home() {
   ]
 
   return (
-    <div className="pb-28">
-      <header className="flex items-center justify-between px-5 pt-5">
+    <div className="pb-nav">
+      <header className="flex items-center justify-between px-5 pt-safe">
         <button type="button" aria-label="Ajustar dados do perfil" onClick={() => nav('/ajustar')} className="rounded-full">
           <Avatar src={state.profile.photo} name={state.profile.name} size={52} />
         </button>

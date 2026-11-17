@@ -72,7 +72,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-6 pb-10">
+    <div className="min-h-screen flex flex-col px-5 pt-safe pb-10">
       <header className="flex items-start justify-between">
         <LogoBox />
         <div className="flex items-center gap-6 pt-3">

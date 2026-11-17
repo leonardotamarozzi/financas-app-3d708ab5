@@ -48,8 +48,8 @@ export default function Invest() {
   const allocTotal = allocation.reduce((a, x) => a + x.value, 0)
 
   return (
-    <div className="pb-28">
-      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center px-5 pt-5 pb-4">
+    <div className="pb-nav">
+      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center px-5 pt-safe pb-4">
         <h1 className="flex-1 min-w-0 truncate text-[30px] font-bold">Investimentos</h1>
         <div className="flex items-center gap-6 shrink-0 pl-3">
           <EyeToggle />

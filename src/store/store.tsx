@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AppState } from './types'
-import { createInitialState, UserError } from './logic'
+import { createInitialState, migrateState, nextPixDelay, processDuePix, UserError } from './logic'
+import { pixNotice, systemNotify, type Notice } from '../lib/notify'
 import { applyAppIdentity } from '../lib/appIcon'
 
 export const STORAGE_KEY = 'app-financas:v1'
@@ -11,7 +12,7 @@ function load(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const s = JSON.parse(raw) as AppState
-      if (s && s.version === 1 && Array.isArray(s.transactions)) return { ...createInitialState(), ...s }
+      if (s && s.version === 1 && Array.isArray(s.transactions)) return migrateState(s)
     }
   } catch {
     /* fall through to a fresh state */
@@ -35,6 +36,10 @@ interface Ctx {
   toast: (text: string, kind?: 'ok' | 'error') => void
   toasts: Toast[]
   now: Date
+  /** Notification banners waiting to be shown (first one is visible). */
+  notices: Notice[]
+  notify: (n: Omit<Notice, 'id'>) => void
+  dismissNotice: (id: number) => void
 }
 
 const StoreContext = createContext<Ctx | null>(null)
@@ -51,6 +56,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [now, setNow] = useState(() => new Date())
   const lastSaved = useRef<string>('')
+  const [notices, setNotices] = useState<Notice[]>([])
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  const notify = useCallback((n: Omit<Notice, 'id'>) => {
+    setNotices((q) => [...q, { ...n, id: Date.now() + Math.random() }])
+  }, [])
+  const dismissNotice = useCallback((id: number) => setNotices((q) => q.filter((n) => n.id !== id)), [])
+
+  // Credit scheduled Pix that are due; one banner (and system notification) per Pix.
+  const processPix = useCallback(() => {
+    const r = processDuePix(stateRef.current, new Date())
+    if (r.received.length === 0) return
+    stateRef.current = r.state
+    setState(r.state)
+    setNow(new Date())
+    for (const pix of r.received) {
+      const n = pixNotice(r.state.profile, pix)
+      notify(n)
+      systemNotify(n)
+    }
+  }, [notify])
+
+  // On load and whenever the tab becomes visible again (catches Pix that came due while the app was closed).
+  useEffect(() => {
+    processPix()
+    const onVis = () => document.visibilityState === 'visible' && processPix()
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [processPix])
+
+  // Timer aimed at the next due Pix; recalculated whenever the list changes.
+  useEffect(() => {
+    const delay = nextPixDelay(state)
+    if (delay === null) return
+    const t = setTimeout(processPix, Math.min(delay + 50, 2 ** 31 - 1))
+    return () => clearTimeout(t)
+  }, [state.scheduledPix, processPix]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toast = useCallback((text: string, kind: 'ok' | 'error' = 'ok') => {
     const id = Date.now() + Math.random()
@@ -91,6 +134,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } catch {
           throw new UserError('O armazenamento do navegador está cheio. Use imagens menores.')
         }
+        stateRef.current = next
         setState(next)
         setNow(new Date())
         if (okMessage) toast(okMessage)
@@ -114,8 +158,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ state, run, replace: setState, unlocked, setUnlocked, toast, toasts, now }),
-    [state, run, unlocked, setUnlocked, toast, toasts, now],
+    () => ({ state, run, replace: setState, unlocked, setUnlocked, toast, toasts, now, notices, notify, dismissNotice }),
+    [state, run, unlocked, setUnlocked, toast, toasts, now, notices, notify, dismissNotice],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

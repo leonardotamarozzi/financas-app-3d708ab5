@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { useStore } from './store/store'
 import { BottomNav, Toasts } from './components/UI'
+import PixBanner from './components/PixBanner'
 import Login from './screens/Login'
 import Home from './screens/Home'
 import Account from './screens/Account'
@@ -33,6 +34,7 @@ export default function App() {
   return (
     <div className="mx-auto max-w-[430px] min-h-screen bg-bg md:border-x md:border-line relative">
       <Toasts />
+      <PixBanner />
       {!unlocked ? (
         <Login />
       ) : (

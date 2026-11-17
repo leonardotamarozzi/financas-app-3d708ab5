@@ -65,6 +65,23 @@ export interface Profile {
   photo?: string
   logo?: string
   icon?: AppIcon
+  /** Fictional account number shown in notifications, format NNNNN-N. */
+  accountNumber: string
+}
+
+export type ScheduledPixStatus = 'agendado' | 'recebido' | 'cancelado'
+
+export interface ScheduledPix {
+  id: string
+  payerName: string
+  /** Cents, > 0. */
+  amount: number
+  /** ISO date-time when the Pix is credited. */
+  dueAt: string
+  description?: string
+  status: ScheduledPixStatus
+  createdAt: string
+  receivedTxId?: string
 }
 
 export interface AppState {
@@ -75,6 +92,7 @@ export interface AppState {
   transactions: Tx[]
   positions: Position[]
   goals: Goal[]
+  scheduledPix: ScheduledPix[]
   rates: Rates
   sampleData: boolean
   createdAt: string

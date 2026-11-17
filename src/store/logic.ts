@@ -1,4 +1,4 @@
-import type { AppState, Goal, Position, Rates, Tx, TxType } from './types'
+import type { AppState, Goal, Position, Rates, ScheduledPix, Tx, TxType } from './types'
 import { canRedeem, getProduct, positionValue, quoteRedeem } from '../lib/invest'
 import { formatBRL } from '../lib/money'
 
@@ -35,14 +35,21 @@ export function defaultGoals(): Goal[] {
   ]
 }
 
+/** Random fictional account number, format NNNNN-N. */
+export function randomAccountNumber(rand = Math.random): string {
+  const n = Array.from({ length: 5 }, () => Math.floor(rand() * 10)).join('')
+  return `${n}-${Math.floor(rand() * 10)}`
+}
+
 export function createInitialState(now = new Date()): AppState {
   return {
     version: 1,
-    profile: { name: 'Seu nome', doc: '***.000.000-**', appName: 'Minhas Finanças' },
+    profile: { name: 'Seu nome', doc: '***.000.000-**', appName: 'Minhas Finanças', accountNumber: randomAccountNumber() },
     hideBalance: false,
     transactions: sampleTransactions(now),
     positions: [],
     goals: defaultGoals(),
+    scheduledPix: [],
     rates: { ...DEFAULT_RATES },
     sampleData: true,
     createdAt: now.toISOString(),
@@ -212,6 +219,96 @@ export function redeem(s: AppState, positionId: string, gross: number, now = new
   return pushTx({ ...s, positions }, { date: now.toISOString(), type: 'redeem', title: 'Resgate', description: desc, amount: q.net, productId: p.id })
 }
 
+// ---------- Scheduled Pix ----------
+
+const MAX_PIX = 100_000_000 // R$ 1.000.000,00
+const YEAR_MS = 366 * 24 * 60 * 60 * 1000
+
+export interface SchedulePixInput {
+  payerName: string
+  amount: number
+  dueAt: string
+  description?: string
+}
+
+export function schedulePix(s: AppState, input: SchedulePixInput, now = new Date()): AppState {
+  const name = input.payerName.trim()
+  if (name.length < 2 || name.length > 60) throw new UserError('O nome de quem envia precisa ter de 2 a 60 caracteres.')
+  if (!Number.isInteger(input.amount) || input.amount < 1) throw new UserError('Informe um valor de pelo menos R$ 0,01.')
+  if (input.amount > MAX_PIX) throw new UserError('O valor máximo é R$ 1.000.000,00.')
+  const due = new Date(input.dueAt)
+  if (Number.isNaN(due.getTime())) throw new UserError('Escolha a data e a hora do recebimento.')
+  if (due.getTime() <= now.getTime()) throw new UserError('A data e a hora precisam estar no futuro.')
+  if (due.getTime() - now.getTime() > YEAR_MS) throw new UserError('Agende para no máximo 1 ano a partir de hoje.')
+  const desc = input.description?.trim()
+  const item: ScheduledPix = {
+    id: uid('spix'),
+    payerName: name,
+    amount: input.amount,
+    dueAt: due.toISOString(),
+    ...(desc ? { description: desc.slice(0, 80) } : {}),
+    status: 'agendado',
+    createdAt: now.toISOString(),
+  }
+  return { ...s, scheduledPix: [...s.scheduledPix, item] }
+}
+
+export function cancelScheduledPix(s: AppState, id: string): AppState {
+  const item = s.scheduledPix.find((p) => p.id === id)
+  if (!item) throw new UserError('Agendamento não encontrado.')
+  if (item.status !== 'agendado') throw new UserError('Só dá para cancelar um recebimento que ainda está agendado.')
+  return { ...s, scheduledPix: s.scheduledPix.map((p) => (p.id === id ? { ...p, status: 'cancelado' as const } : p)) }
+}
+
+/** Credits every scheduled Pix that is due. Idempotent: received items are never credited again. */
+export function processDuePix(s: AppState, now = new Date()): { state: AppState; received: ScheduledPix[] } {
+  const due = s.scheduledPix
+    .filter((p) => p.status === 'agendado' && new Date(p.dueAt).getTime() <= now.getTime())
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+  if (due.length === 0) return { state: s, received: [] }
+  const txs: Tx[] = []
+  const done = new Map<string, ScheduledPix>()
+  for (const p of due) {
+    const tx: Tx = {
+      id: uid('tx'),
+      date: p.dueAt,
+      type: 'pix_in',
+      title: 'Pix recebido',
+      description: p.description ? `De ${p.payerName} · ${p.description}` : `De ${p.payerName}`,
+      amount: p.amount,
+    }
+    txs.push(tx)
+    done.set(p.id, { ...p, status: 'recebido', receivedTxId: tx.id })
+  }
+  const state: AppState = {
+    ...s,
+    transactions: [...s.transactions, ...txs],
+    scheduledPix: s.scheduledPix.map((p) => done.get(p.id) ?? p),
+  }
+  return { state, received: [...done.values()] }
+}
+
+/** Milliseconds until the next scheduled Pix, or null when none is pending. */
+export function nextPixDelay(s: AppState, now = new Date()): number | null {
+  const times = s.scheduledPix.filter((p) => p.status === 'agendado').map((p) => new Date(p.dueAt).getTime() - now.getTime())
+  if (times.length === 0) return null
+  return Math.max(0, Math.min(...times))
+}
+
+/** Fills fields added after the first release (state version stays 1). */
+export function migrateState(raw: Partial<AppState>): AppState {
+  const base = createInitialState()
+  const profile = { ...base.profile, ...(raw.profile ?? {}) }
+  if (!/^\d{5}-\d$/.test(profile.accountNumber ?? '')) profile.accountNumber = randomAccountNumber()
+  return {
+    ...base,
+    ...raw,
+    profile,
+    goals: Array.isArray(raw.goals) ? raw.goals : base.goals,
+    scheduledPix: Array.isArray(raw.scheduledPix) ? raw.scheduledPix : [],
+  } as AppState
+}
+
 // ---------- Reports ----------
 
 const EXTERNAL_IN: TxType[] = ['pix_in', 'receive']
@@ -272,5 +369,5 @@ export function parseBackup(text: string): AppState {
   if (!d || d.version !== 1 || !Array.isArray(d.transactions) || !Array.isArray(d.positions) || !d.profile || !d.rates) {
     throw new UserError('O arquivo não é um backup deste app.')
   }
-  return { ...createInitialState(), ...d, goals: Array.isArray(d.goals) ? d.goals : [] } as AppState
+  return migrateState({ ...d, goals: Array.isArray(d.goals) ? d.goals : [] })
 }

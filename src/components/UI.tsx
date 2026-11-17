@@ -90,8 +90,8 @@ export function Screen({
 }) {
   const nav = useNavigate()
   return (
-    <div className="pb-28">
-      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center gap-4 px-5 pt-5 pb-4">
+    <div className="pb-nav">
+      <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur flex items-center gap-4 px-5 pt-safe pb-4">
         {back && (
           <button
             type="button"
@@ -318,7 +318,7 @@ export function BottomNav() {
 export function Toasts() {
   const { toasts } = useStore()
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-[400px] px-4 space-y-2 pointer-events-none" aria-live="polite">
+    <div className="fixed top-safe-toast left-1/2 -translate-x-1/2 z-[60] w-full max-w-[400px] px-4 space-y-2 pointer-events-none" aria-live="polite">
       {toasts.map((t) => (
         <div key={t.id} role={t.kind === 'error' ? 'alert' : 'status'} className={cx('rounded-2xl px-4 py-3 text-[15px] font-medium shadow-lg toast-in', t.kind === 'error' ? 'bg-[#4a1d1d] text-red-100' : 'bg-[#16382a] text-[#c8f5df]')}>
           {t.text}
