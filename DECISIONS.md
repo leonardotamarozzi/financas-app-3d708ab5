@@ -17,3 +17,4 @@
 - Atalho "Metas" no Início no lugar do quarto atalho cortado do print; o banner promocional virou "Seu mês até agora" (resumo do mês).
 - Tela Investimentos carregada sob demanda (code split) para tirar o recharts do pacote inicial.
 - Ícone padrão em SVG próprio; versões PNG 192/512 do padrão são geradas no navegador para apple-touch-icon e manifest.
+- Publicação: o plano do GitHub recusou Pages em repositório privado (HTTP 422). Seguindo o prompt, o repositório foi tornado público (nome aleatório, sem dados pessoais, site com noindex e robots.txt bloqueando indexação).
