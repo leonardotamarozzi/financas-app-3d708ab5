@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body { background: #0e0e0e; }
+body { color: #fff; font-family: Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid #F0A060; outline-offset: 2px; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-in { animation: sheet-in .22s ease-out; }
+.toast-in { animation: toast-in .18s ease-out; }
+@media (prefers-reduced-motion: reduce) { .sheet-in, .toast-in { animation: none; } }
